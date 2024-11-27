@@ -28,6 +28,8 @@ const AuthSchema = new mongoose.Schema(
       enum: ["admin", "instructor", "student"],
       default: "student",
     },
+    courses: [{ type: mongoose.Schema.Types.ObjectId, ref: "Course" }], // For instructors
+    grades: [{ type: mongoose.Schema.Types.ObjectId, ref: "Grade" }], // For students
   },
   { timestamps: true }
 );
