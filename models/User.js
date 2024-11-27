@@ -1,48 +1,69 @@
 const mongoose = require("mongoose");
 const validator = require("validator");
 const bcrypt = require("bcryptjs");
-const AuthSchema = new mongoose.Schema(
+
+const options = { discriminatorKey: "role", collection: "users" };
+const BaseUserSchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      required: [true, "please provide name"],
+      required: [true, "Please provide a name"],
       minLength: 3,
       maxLength: 20,
     },
     email: {
       type: String,
       unique: true,
-      required: [true, "please provide email"],
+      required: [true, "Please provide an email"],
       validate: {
         validator: validator.isEmail,
-        message: "Please provide valid email",
+        message: "Please provide a valid email",
       },
     },
     password: {
       type: String,
-      required: [true, "Please provide password"],
+      required: [true, "Please provide a password"],
       minLength: 6,
     },
-    role: {
-      type: String,
-      enum: ["admin", "instructor", "student"],
-      default: "student",
-    },
-    courses: [{ type: mongoose.Schema.Types.ObjectId, ref: "Course" }], // For instructors
-    grades: [{ type: mongoose.Schema.Types.ObjectId, ref: "Grade" }], // For students
   },
+  options,
   { timestamps: true }
 );
 
-AuthSchema.pre("save", async function () {
+BaseUserSchema.pre("save", async function () {
   if (!this.isModified("password")) return;
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
 });
 
-AuthSchema.methods.comparePassword = async function (userPassword) {
-  const isMatch = await bcrypt.compare(userPassword, this.password);
-  return isMatch;
+BaseUserSchema.methods.comparePassword = async function (userPassword) {
+  return await bcrypt.compare(userPassword, this.password);
 };
 
-module.exports = mongoose.model("User", AuthSchema);
+const User = mongoose.model("User", BaseUserSchema);
+
+const InstructorSchema = new mongoose.Schema({
+  courses: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Course",
+    },
+  ],
+});
+
+const StudentSchema = new mongoose.Schema({
+  grades: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Grade",
+    },
+  ],
+});
+
+const AdminSchema = new mongoose.Schema({});
+
+const Instructor = User.discriminator("instructor", InstructorSchema);
+const Student = User.discriminator("student", StudentSchema);
+const Admin = User.discriminator("admin", AdminSchema);
+
+module.exports = { User, Instructor, Student, Admin };
