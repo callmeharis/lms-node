@@ -1,8 +1,7 @@
 const { createTokenUser, attachCookiesToResponse } = require("../utils");
-const User = require("../models/User");
-
-const CustomError = require("../errors");
 const { StatusCodes } = require("http-status-codes");
+const { Admin, Instructor, Student, User } = require("../models/User");
+const CustomError = require("../errors");
 const register = async (req, res) => {
   const { name, email, password, role: requestedRole } = req.body;
 
@@ -17,7 +16,15 @@ const register = async (req, res) => {
     role = requestedRole;
   }
 
-  const user = await User.create({ name, email, password, role });
+  let user;
+  if (role === "admin") {
+    user = await Admin.create({ name, email, password });
+  } else if (role === "instructor") {
+    user = await Instructor.create({ name, email, password });
+  } else if (role === "student") {
+    user = await Student.create({ name, email, password });
+  }
+
   const tokenUser = createTokenUser(user);
   attachCookiesToResponse({ res, user: tokenUser });
   res.status(StatusCodes.CREATED).json({ user: tokenUser });
@@ -52,7 +59,7 @@ const logout = async (req, res) => {
 };
 
 const createUser = async (req, res) => {
-  const { name, email, password, role } = req.body;
+  const { name, email, password, role, courses, grades } = req.body;
 
   // Validate role
   if (!["instructor", "student"].includes(role)) {
@@ -67,8 +74,12 @@ const createUser = async (req, res) => {
     return res.status(400).json({ message: "Email already exists" });
   }
 
-  // Create user
-  const newUser = await User.create({ name, email, password, role });
+  let newUser;
+  if (role === "instructor") {
+    newUser = await Instructor.create({ name, email, password, courses });
+  } else if (role === "student") {
+    newUser = await Student.create({ name, email, password, grades });
+  }
 
   res.status(201).json({ user: newUser });
 };

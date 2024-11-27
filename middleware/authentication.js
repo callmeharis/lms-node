@@ -1,6 +1,6 @@
 const { UnauthenticatedError } = require("../errors");
+const { User } = require("../models/User");
 const jwt = require("jsonwebtoken");
-const User = require("../models/User");
 
 const authenticateUser = async (req, res, next) => {
   const authHeader = req.headers.authorization;
@@ -17,6 +17,7 @@ const authenticateUser = async (req, res, next) => {
 
     // Fetch the user from the database
     const user = await User.findById(payload.userId).select("-password");
+
     if (!user) {
       throw new UnauthenticatedError("Authentication invalid");
     }
